@@ -18,9 +18,10 @@ int GAflag = 0;         //距離によるGA判定
 const int DISTANCE_LENGTH = 410;    //距離の閾値 Aは半分
 
 //const int GENE_LENGTH = 52; // 遺伝子のbit数
-const int GENE_LENGTH = 68; // 遺伝子のbit数
+const int GENE_LENGTH = 44; // 遺伝子のbit数
 const int POPULATION_SIZE = 10; // 1世代あたりの個体数
 const double MUTATION_RATE = 0.01; // 突然変異率
+const int FINAL_GENE = 100;    //評価完了の世代数
 
 int resetflag = 0;  //GAリセットのためのフラグ
 
@@ -36,7 +37,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_PIN, NEO_GRB + 
 File file;
 
 String readGAdata;  //SDカードから読み取ったデータ
-int SDgeneration; //SDカードから読み取った世代数
+int SDgeneration = 999; //SDカードから読み取った世代数
 std::string NumberGET = ",ABCDEFGHIJ";  //遺伝子番号
 String SDGA_array[POPULATION_SIZE] = {};  //SDカードから読み取った遺伝子を格納する配列
 
@@ -301,8 +302,28 @@ int main() {
     // 初期個体群の生成
     std::vector<Individual> population = generateInitialPopulation();
 
+    //SDカードデータが壊れた時の保険
+//                  DeleteSDData();
+//                  population = generateInitialPopulation();
+//                  writeData(0,population);
+
+
     // 世代数分ループ
-    for (int generation = 0; generation < 100; ++generation) {
+    for (int generation = 0; generation < FINAL_GENE; ++generation) {
+          if(generation == 0){
+            readData();
+
+            generation = SDgeneration+1;
+            if(generation != 1000){
+              for(int index = 0;index < POPULATION_SIZE;index++){
+                population[index] = ChangeParentFromSD(SDGA_array[index]);
+              }
+            }else{
+              generation = 0;
+              writeData(0,population);
+            }
+          }
+          
           M5.Lcd.fillRect(0, 140, 320, 200, WHITE);
           M5.Lcd.setCursor(100, 150);
           M5.Lcd.setTextColor(RED , WHITE);
@@ -528,15 +549,23 @@ int main() {
 //            serialcommunication(population[index]);
 //            Serial.println("");
           }
+        }else{
+          //SDカード書き込み
+          writeData(generation,population);
         }
-        //SDカード書き込み
-        writeData(generation,population);
-
     }
 
     // 最終世代の表示←100世代目の最も評価高い個体
     for (const Individual &individual : population) {
         displayGenesAndFitness(individual);
+    }
+
+    M5.Lcd.fillRect(0, 140, 320, 200, WHITE);
+    while(1){
+      M5.Lcd.setCursor(20, 175);
+      M5.Lcd.setTextColor(RED , WHITE);
+      M5.Lcd.setTextSize(4);
+      M5.Lcd.println("COMPLETE!!");
     }
 
     return 0;
