@@ -15,7 +15,7 @@ int distance_sum = 0; //  距離の合計(平均化の際に使用可能)
 int distance_flag = 0;  //距離判定 がリセットされたか
 int GAflag = 0;         //距離によるGA判定
 
-const int DISTANCE_LENGTH = 410;    //距離の閾値 Aは半分
+const int DISTANCE_LENGTH = 430;    //距離の閾値 Aは半分
 
 //const int GENE_LENGTH = 52; // 遺伝子のbit数
 const int GENE_LENGTH = 44; // 遺伝子のbit数
@@ -280,11 +280,11 @@ void DeleteSDData() {
 
 int readdistance(){
   int distotal = 0;
-  for(int discount = 0; discount <5;discount++){
+  for(int discount = 0; discount <10;discount++){
     distotal = distotal + sensor.readRangeContinuousMillimeters();
-    delay(1);
+    delay(5);
   }
-  distotal = distotal / 5;
+  distotal = distotal / 10;
 
   return distotal;
 }
@@ -462,12 +462,12 @@ int main() {
                   break;
                 }
               }else if(DistanceMode == 1){
-                if (M5.BtnA.wasReleased() == 1 || ((distance <= DISTANCE_LENGTH/2) && (GAflag == 1)) || button1_state == LOW) {
+                if (M5.BtnA.wasReleased() == 1 || ((distance <= DISTANCE_LENGTH*0.6) && (GAflag == 1)) || button1_state == LOW) {
                   selectedButton = 'A';
                   GAflag = 0;
                   M5.Lcd.println("SELECTED A");
                   break;
-                } else if (M5.BtnC.wasReleased() == 1 || ((distance > DISTANCE_LENGTH/2)&&(distance <= DISTANCE_LENGTH)&& (GAflag == 1)) || button2_state == LOW) {
+                } else if (M5.BtnC.wasReleased() == 1 || ((distance > DISTANCE_LENGTH*0.6)&&(distance <= DISTANCE_LENGTH)&& (GAflag == 1)) || button2_state == LOW) {
                   selectedButton = 'C';
                   GAflag = 0;
                   M5.Lcd.println("SELECTED B");
