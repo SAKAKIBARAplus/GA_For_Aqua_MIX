@@ -72,9 +72,9 @@ void initM5Stack() {
     M5.Lcd.setBrightness(100);
     M5.Lcd.setTextSize(1);
 
-    //距離センサ
-    sensor.init();
-    sensor.startContinuous();  //  連続測定を開始
+    //距離センサ(距離センサ使用しないときはコメントアウト)
+//    sensor.init();
+//    sensor.startContinuous();  //  連続測定を開始
 }
 
 // M5Stackの操作（例：ボタンが押されたかどうかを返す）
@@ -383,8 +383,8 @@ int main() {
             while (!isButtonPressed() && DistanceMode == 0) {
                 M5.update(); // M5Stackの更新
                 // ボタンが押されるのを待機
-              //距離を計測
-              distance = readdistance();
+              //距離を計測(距離センサ使用しないときはコメントアウト)
+//              distance = readdistance();
               M5.Lcd.setCursor(0, 20);
               M5.Lcd.print("Distance : ");
               M5.Lcd.print(distance);
@@ -403,8 +403,8 @@ int main() {
               button1_state = digitalRead(BUTTON1_PIN);
               button2_state = digitalRead(BUTTON2_PIN);
               
-              //距離を計測
-              distance = readdistance();
+              //距離を計測(距離センサ使用しないときはコメントアウト)
+//              distance = readdistance();
               M5.Lcd.setCursor(0, 20);
               M5.Lcd.print("Distance : ");
               M5.Lcd.print(distance);
