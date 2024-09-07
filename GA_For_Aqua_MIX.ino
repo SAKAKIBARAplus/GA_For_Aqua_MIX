@@ -490,13 +490,13 @@ int main() {
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(0,0,0));
                   }
                   strip.show(); // 設定した色を表示
-                  delay(500);
+//                  delay(500); //使用しないときはまたない
                   for (int color = 5; color < 5+PIXELS_GA; color++) {
                     strip.setPixelColor(color, strip.Color(1 + geneRED1, 1 + geneGRN1, 1 + geneBLU1));
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(0,0,0));
                   }
                   strip.show(); // 設定した色を表示
-                  delay(300);
+//                  delay(300); //使用しないときはまたない
                 }
             } else if(selectedButton == 'C'){
                 population[i + 1].fitness = 1.0;
@@ -507,13 +507,13 @@ int main() {
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(0,0,0));
                   }
                   strip.show(); // 設定した色を表示
-                  delay(500);
+//                  delay(500); //使用しないときはまたない
                   for (int color = 5; color < 5+PIXELS_GA; color++) {
                     strip.setPixelColor(color, strip.Color(0,0,0));
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(1 + geneRED2, 1 + geneGRN2, 1 + geneBLU2));
                   }
                   strip.show(); // 設定した色を表示
-                  delay(300);
+//                  delay(300); //使用しないときはまたない
                 }
             }
 
