@@ -20,6 +20,7 @@ const int DISTANCE_LENGTH = 430;    //距離の閾値 Aは半分
 //const int GENE_LENGTH = 52; // 遺伝子のbit数
 const int GENE_LENGTH = 44; // 遺伝子のbit数
 const int POPULATION_SIZE = 10; // 1世代あたりの個体数
+const int EVALUATION = 50; //1世代で集める評価数
 const double MUTATION_RATE = 0.01; // 突然変異率
 const int FINAL_GENE = 100;    //評価完了の世代数
 
@@ -73,8 +74,8 @@ void initM5Stack() {
     M5.Lcd.setTextSize(1);
 
     //距離センサ(距離センサ使用しないときはコメントアウト)
-//    sensor.init();
-//    sensor.startContinuous();  //  連続測定を開始
+    sensor.init();
+    sensor.startContinuous();  //  連続測定を開始
 }
 
 // M5Stackの操作（例：ボタンが押されたかどうかを返す）
@@ -205,11 +206,11 @@ int color_of_wind(char bit1,char bit2,int rate){
   if(bit2 == '0' && bit1 == '0'){
     return 1;
   }else if(bit2 == '0' && bit1 == '1'){
-    return 10 + rate;
+    return 7 + rate;
   }else if(bit2 == '1' && bit1 == '0'){
-    return 20 + rate;
+    return 14 + rate;
   }else if(bit2 == '1' && bit1 == '1'){
-    return 30 + rate;
+    return 21 + rate;
   }
 }
 
@@ -278,15 +279,40 @@ void DeleteSDData() {
   file.close();
 }
 
+//距離計測
 int readdistance(){
   int distotal = 0;
-  for(int discount = 0; discount <10;discount++){
+  for(int discount = 0; discount <5;discount++){
     distotal = distotal + sensor.readRangeContinuousMillimeters();
-    delay(5);
+//    delay(1);
   }
-  distotal = distotal / 10;
+  distotal = distotal / 5;
 
   return distotal;
+}
+
+//距離が安定するまで待つ
+void stabledistance(){
+    int A_Dis_flag = 0; //Aが選択されるときの距離フラグ
+    int B_Dis_flag = 0; //Aが選択されるときの距離フラグ
+    while(1){               
+    distance = readdistance();
+    if(distance <= DISTANCE_LENGTH*0.5){
+      B_Dis_flag=0;
+      A_Dis_flag++;
+      if(A_Dis_flag == 5){
+        break;
+      }
+    }else if((distance > DISTANCE_LENGTH*0.5)&&(distance <= DISTANCE_LENGTH)){
+      A_Dis_flag=0;
+      B_Dis_flag++;
+      if(B_Dis_flag == 5){
+        break;
+      }
+    }else{
+      break;
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -298,6 +324,9 @@ int main() {
 
     int button1_state = HIGH;
     int button2_state = HIGH;
+
+    int evaluation_target_a = 0;//評価対象Aの個体番号
+    int evaluation_target_b = 0;//評価対象Bの個体番号
 
     // 初期個体群の生成
     std::vector<Individual> population = generateInitialPopulation();
@@ -338,18 +367,13 @@ int main() {
           M5.Lcd.print("DistanceMode : ");
           M5.Lcd.println(DistanceMode);
 
-        // 2個体ずつ画面表示させ、評価値（ユーザに選択されたら評価値1）を付与するプログラム
-        for (int i = 0; i < POPULATION_SIZE; i += 2) {
-            // 評価値クリア
-            population[i].fitness = 0.0;
-            population[i + 1].fitness = 0.0;
+        //世代ごとに全個体の評価値をクリア
+        for (int i = 0; i < POPULATION_SIZE; i ++) {
+          population[i].fitness = 0.0;
+        }
 
-            //serial通信(UNREAL ENGINEに遺伝子A,遺伝子Bの信号を送る)
-//            Serial.print("A,");
-            serialcommunication(population[i]);
-//            Serial.print("B,");
-            serialcommunication(population[i+1]);
-            Serial.println("");
+        // 2個体ずつ画面表示させ、評価値（ユーザに選択されたら評価値+1）を付与するプログラム
+        for (int i = 0; i < EVALUATION; i ++) {
 
             //LEDを光らせる
             int geneRED1 =0;
@@ -359,24 +383,41 @@ int main() {
             int geneGRN2 =0;
             int geneBLU2 =0;
 
-            geneRED1 = color_of_wind(population[i].genes[0],population[i].genes[1],-1);
-            geneGRN1 = color_of_wind(population[i].genes[2],population[i].genes[3],0);
-            geneBLU1 = color_of_wind(population[i].genes[4],population[i].genes[5],1);
-            geneRED2 = color_of_wind(population[i+1].genes[0],population[i+1].genes[1],-1);
-            geneGRN2 = color_of_wind(population[i+1].genes[2],population[i+1].genes[3],0);
-            geneBLU2 = color_of_wind(population[i+1].genes[4],population[i+1].genes[5],1);
+            geneRED1 = color_of_wind(population[evaluation_target_a].genes[0],population[evaluation_target_a].genes[1],-1);
+            geneGRN1 = color_of_wind(population[evaluation_target_a].genes[2],population[evaluation_target_a].genes[3],0);
+            geneBLU1 = color_of_wind(population[evaluation_target_a].genes[4],population[evaluation_target_a].genes[5],1);
+            geneRED2 = color_of_wind(population[evaluation_target_b].genes[0],population[evaluation_target_b].genes[1],-1);
+            geneGRN2 = color_of_wind(population[evaluation_target_b].genes[2],population[evaluation_target_b].genes[3],0);
+            geneBLU2 = color_of_wind(population[evaluation_target_b].genes[4],population[evaluation_target_b].genes[5],1);
             for (int color = 5; color < 5+PIXELS_GA; color++) {
               strip.setPixelColor(color, strip.Color(1 + geneRED1, 1 + geneGRN1, 1 + geneBLU1));
               strip.setPixelColor(NUM_PIXELS - color, strip.Color(1 + geneRED2, 1 + geneGRN2, 1 + geneBLU2));
             }
               strip.show(); // 設定した色を表示
             
+            // 表示個体を2つランダムに選択
+            evaluation_target_a = rand()%10;
+            int s = 0;
+            while (s == 0) {
+              evaluation_target_b = rand()%10;
+              if (evaluation_target_a != evaluation_target_b) {
+                s = 1;
+              }
+            }
+
+            //serial通信(UNREAL ENGINEに遺伝子A,遺伝子Bの信号を送る)
+//            Serial.print("A,");
+            serialcommunication(population[evaluation_target_a]);
+//            Serial.print("B,");
+            serialcommunication(population[evaluation_target_b]);
+            Serial.println("");
+            
             // 表示用個体A
             M5.Lcd.setCursor(0, 50);  //遺伝子Aの座標
-            displayGenesAndFitness(population[i]);
+            displayGenesAndFitness(population[evaluation_target_a]);
             // 表示用個体B
             M5.Lcd.setCursor(0, 100);  //遺伝子Aの座標
-            displayGenesAndFitness(population[i + 1]);
+            displayGenesAndFitness(population[evaluation_target_b]);
 
             // 評価値を入力（M5Stack経由で評価された個体に評価値1をつける）
             M5.Lcd.println("Select the better individual (A/B): ");
@@ -384,7 +425,7 @@ int main() {
                 M5.update(); // M5Stackの更新
                 // ボタンが押されるのを待機
               //距離を計測(距離センサ使用しないときはコメントアウト)
-//              distance = readdistance();
+              stabledistance();
               M5.Lcd.setCursor(0, 20);
               M5.Lcd.print("Distance : ");
               M5.Lcd.print(distance);
@@ -404,7 +445,7 @@ int main() {
               button2_state = digitalRead(BUTTON2_PIN);
               
               //距離を計測(距離センサ使用しないときはコメントアウト)
-//              distance = readdistance();
+              stabledistance();
               M5.Lcd.setCursor(0, 20);
               M5.Lcd.print("Distance : ");
               M5.Lcd.print(distance);
@@ -462,12 +503,12 @@ int main() {
                   break;
                 }
               }else if(DistanceMode == 1){
-                if (M5.BtnA.wasReleased() == 1 || ((distance <= DISTANCE_LENGTH*0.6) && (GAflag == 1)) || button1_state == LOW) {
+                if (M5.BtnA.wasReleased() == 1 || ((distance <= DISTANCE_LENGTH*0.5) && (GAflag == 1)) || button1_state == LOW) {
                   selectedButton = 'A';
                   GAflag = 0;
                   M5.Lcd.println("SELECTED A");
                   break;
-                } else if (M5.BtnC.wasReleased() == 1 || ((distance > DISTANCE_LENGTH*0.6)&&(distance <= DISTANCE_LENGTH)&& (GAflag == 1)) || button2_state == LOW) {
+                } else if (M5.BtnC.wasReleased() == 1 || ((distance > DISTANCE_LENGTH*0.5)&&(distance <= DISTANCE_LENGTH)&& (GAflag == 1)) || button2_state == LOW) {
                   selectedButton = 'C';
                   GAflag = 0;
                   M5.Lcd.println("SELECTED B");
@@ -482,7 +523,7 @@ int main() {
             }
 
             if (selectedButton == 'A') {
-                population[i].fitness = 1.0;
+                population[evaluation_target_a].fitness += 1.0;
                 //選択された方の光の明滅
                 for (int blinkLED = 0;blinkLED < 2;blinkLED++){
                   for (int color = 5; color < 5+PIXELS_GA; color++) {
@@ -490,16 +531,16 @@ int main() {
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(0,0,0));
                   }
                   strip.show(); // 設定した色を表示
-//                  delay(500); //使用しないときはまたない
+                  delay(500); //使用しないときはまたない
                   for (int color = 5; color < 5+PIXELS_GA; color++) {
                     strip.setPixelColor(color, strip.Color(1 + geneRED1, 1 + geneGRN1, 1 + geneBLU1));
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(0,0,0));
                   }
                   strip.show(); // 設定した色を表示
-//                  delay(300); //使用しないときはまたない
+                  delay(300); //使用しないときはまたない
                 }
             } else if(selectedButton == 'C'){
-                population[i + 1].fitness = 1.0;
+                population[evaluation_target_b].fitness += 1.0;
                 //選択された方の光の明滅
                 for (int blinkLED = 0;blinkLED < 2;blinkLED++){
                   for (int color = 5; color < 5+PIXELS_GA; color++) {
@@ -507,13 +548,13 @@ int main() {
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(0,0,0));
                   }
                   strip.show(); // 設定した色を表示
-//                  delay(500); //使用しないときはまたない
+                  delay(500); //使用しないときはまたない
                   for (int color = 5; color < 5+PIXELS_GA; color++) {
                     strip.setPixelColor(color, strip.Color(0,0,0));
                     strip.setPixelColor(NUM_PIXELS - color, strip.Color(1 + geneRED2, 1 + geneGRN2, 1 + geneBLU2));
                   }
                   strip.show(); // 設定した色を表示
-//                  delay(300); //使用しないときはまたない
+                  delay(300); //使用しないときはまたない
                 }
             }
 
